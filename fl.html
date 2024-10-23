@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hazard Map</title>
+
+    <!-- Leaflet.js CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
+    <!-- Custom CSS -->
+    <style>
+        #map {
+            height: 500px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <h1>Hazard Map</h1>
+
+    <!-- Input fields for latitude and longitude -->
+    <label for="latitude">Latitude:</label>
+    <input type="text" id="latitude" value="34.05" />
+    <label for="longitude">Longitude:</label>
+    <input type="text" id="longitude" value="-118.25" />
+    <button onclick="generateMap()">Generate Map</button>
+
+    <!-- Map container -->
+    <div id="map"></div>
+
+    <!-- Leaflet.js JavaScript -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+    <script>
+        // Function to fetch hazard data using USGS Earthquake API
+        async function getHazardData(lat, lon) {
+            const api_url = `https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&latitude=${lat}&longitude=${lon}&maxradiuskm=100`;
+
+            try {
+                const response = await fetch(api_url);
+                if (!response.ok) throw new Error('Error fetching hazard data');
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error(error);
+                return null;
+            }
+        }
+
+        // Function to generate the map and display hazard events
+        async function generateMap() {
+            const lat = document.getElementById('latitude').value;
+            const lon = document.getElementById('longitude').value;
+
+            // Create a map centered on the provided coordinates
+            const map = L.map('map').setView([lat, lon], 8);
+
+            // Add tile layer (basemap)
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+
+            // Fetch hazard data
+            const hazardData = await getHazardData(lat, lon);
+
+            // Add hazard markers to the map if data exists
+            if (hazardData && hazardData.features.length > 0) {
+                hazardData.features.forEach(feature => {
+                    const coords = feature.geometry.coordinates;
+                    const properties = feature.properties;
+                    const marker = L.marker([coords[1], coords[0]]).addTo(map);
+                    marker.bindPopup(`Title: ${properties.title}<br>Magnitude: ${properties.mag}`);
+                });
+            } else {
+                alert("No hazard data available for this location.");
+            }
+        }
+    </script>
+</body>
+</html>
